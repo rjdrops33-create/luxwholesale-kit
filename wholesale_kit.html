@@ -319,6 +319,7 @@ a{color:var(--accent)}
     if (s.call) html += IS_DESKTOP
       ? '<div class="ccard"><div class="cc-who">' + (s.who || "Contact") + '</div><div class="cc-num">' + fmtPhone(s.call) + '</div><button class="callbtn" onclick="kitCopyNum(String(\'' + String(s.call).replace(/[^\d]/g, "") + '\'))">Copy number</button><span id="kitcopymsg" class="okmsg"></span><div class="cc-sub">Dial from your phone \u2014 your script is above.</div></div>'
       : '<a class="callbtn" href="tel:' + String(s.call).replace(/[^\d]/g, "") + '">\ud83d\udcde Call ' + (s.who || "") + '</a>';
+    if (idx > 0) html += '<button class="callbtn" onclick="kitBack()" style="opacity:.75">\u2190 Back one step</button>';
     html += '<button class="callbtn" onclick="kitNext()">' + (done ? 'Start the next deal \u2192' : 'Done \u2014 next step \u2192') + '</button>';
     if (idx === 2 || done) {
       html += '<div class="logform"><div class="lf-title">Log this call</div>' +
@@ -340,6 +341,11 @@ a{color:var(--accent)}
   window.kitNext = function () {
     var i = Number(localStorage.getItem("kitwiz") || 0) + 1;
     if (i > 4) i = 0;
+    localStorage.setItem("kitwiz", i);
+    render();
+  };
+  window.kitBack = function () {
+    var i = Math.max(Number(localStorage.getItem("kitwiz") || 0) - 1, 0);
     localStorage.setItem("kitwiz", i);
     render();
   };

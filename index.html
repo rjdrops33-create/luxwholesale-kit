@@ -54,8 +54,8 @@ a{color:var(--accent)}
 <h2>0 &middot; Live Deal Co-Pilot — your step-by-step call chat</h2>
 <div class="card" id="copilot-gate">
   <h3>Unlock the live chat</h3>
-  <p>Same PIN as the Command Deck. This section pulls live deal data and walks you through every call, step by step.</p>
-  <input id="kitkey" type="password" placeholder="Deck PIN" style="background:#101521;border:1px solid #2a3145;color:var(--ink);border-radius:6px;padding:9px;font-size:14px;font-family:inherit">
+  <p>Your Command Deck access code unlocks this. It pulls live deal data and walks you through every call, step by step.</p>
+  <input id="kitkey" type="password" placeholder="Access code" style="background:#101521;border:1px solid #2a3145;color:var(--ink);border-radius:6px;padding:9px;font-size:14px;font-family:inherit">
   <button class="callbtn" onclick="kitUnlock()">Unlock</button>
   <span id="kitgerr" style="display:none;color:var(--bad);font-size:13px">Wrong PIN — text Scarlet.</span>
 </div>
@@ -273,7 +273,7 @@ a{color:var(--accent)}
       '<p class="small">Team board: ' + board + ' \u00b7 last activity ' + last + '</p>';
 
     var idx = Math.min(Number(localStorage.getItem("kitwiz") || 0), 4);
-    var member = localStorage.getItem("kitmember") || "Ryian";
+    var member = (D.user && D.user.name) || "Ryian";
     var bc = hot ? (hot.buyer_contact || {}) : {};
     var dev = bc.contact ? bc.contact.split(",")[0].trim() : (bc.name || "your developer");
     var verdict = hot && hot.__off != null ? (hot.__off <= 15 ? "WORKS" : hot.__off <= 25 ? "STRETCH" : "LONG SHOT") : "\u2014";
@@ -312,7 +312,7 @@ a{color:var(--accent)}
     html += '<button class="callbtn" onclick="kitNext()">' + (done ? 'Start the next deal \u2192' : 'Done \u2014 next step \u2192') + '</button>';
     if (idx === 2 || done) {
       html += '<div class="logform"><div class="lf-title">Log this call</div>' +
-        '<input id="kitmember" placeholder="Your name" value="' + member + '">' +
+        '<div style="color:#8b94a7;font-size:12px;margin-top:8px">Signed in as ' + member + ' \u2014 your calls log under your name automatically.</div>' +
         '<select id="kitoutcome"><option>Reached \u2014 positive</option><option>Reached \u2014 cold</option><option>Left voicemail</option><option>No answer</option><option>Call back later</option></select>' +
         '<textarea id="kitnotes" placeholder="Notes: what they said, next steps"></textarea>' +
         '<button class="callbtn" onclick="kitLog()">Save to logbook</button><span id="kitsaved" class="ok"></span></div>';
@@ -335,10 +335,8 @@ a{color:var(--accent)}
   };
 
   window.kitLog = async function () {
-    var member = (F("kitmember") || {}).value || "";
-    localStorage.setItem("kitmember", member.trim());
     try {
-      var r = await fetch(LOG_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: sessionStorage.getItem("luxpin") || "", member: member, step: window.__kitctx.step, address: window.__kitctx.address, outcome: (F("kitoutcome") || {}).value || "", notes: (F("kitnotes") || {}).value || "" }) });
+      var r = await fetch(LOG_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: sessionStorage.getItem("luxpin") || "", pin: sessionStorage.getItem("luxpin") || "", step: window.__kitctx.step, address: window.__kitctx.address, outcome: (F("kitoutcome") || {}).value || "", notes: (F("kitnotes") || {}).value || "" }) });
       var j = await r.json();
       if (j.ok) { F("kitsaved").textContent = "\u2713 Saved to the logbook"; load(); }
       else F("kitsaved").textContent = "Save failed \u2014 try again";

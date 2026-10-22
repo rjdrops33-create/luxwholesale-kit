@@ -23,11 +23,50 @@ table{width:100%;border-collapse:collapse;margin:10px 0}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #232a3a;font-size:14px}
 th{color:var(--gold)}
 a{color:var(--accent)}
+
+/* Live Deal Co-Pilot */
+.bubble{background:#101521;border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin:8px 0;font-size:13.5px;line-height:1.6;color:#dfe5ef}
+.bubble .bl{display:block;color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;opacity:.85}
+.callbtn{display:inline-block;background:#1d2433;color:var(--accent);border:1px solid #2c3648;border-radius:8px;padding:8px 14px;margin:8px 8px 8px 0;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit}
+.logform{margin-top:12px;background:#101521;border:1px solid #232a3a;border-radius:10px;padding:12px}
+.logform input,.logform select,.logform textarea{width:100%;margin-top:8px;padding:9px;background:#0b0e14;border:1px solid #2a3145;color:var(--ink);border-radius:6px;font-size:13px;font-family:inherit}
+.logform textarea{min-height:60px;resize:vertical}
+.lf-title{color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.85}
+.ok{color:var(--accent);font-size:12px;margin-left:8px}
+.logrow{background:#141925;border:1px solid #232a3a;border-radius:10px;padding:10px 14px;margin:8px 0;font-size:13px}
+.logrow .lr-h{color:var(--muted);font-size:11px}
+.logrow .lr-h b{color:var(--gold)}
+.logrow .notes{color:#c6cddd;margin-top:4px;white-space:normal}
+.statgrid{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.stat{background:#101521;border:1px solid #232a3a;border-radius:10px;padding:10px 14px;min-width:110px}
+.stat .v{color:var(--gold);font-size:20px;font-weight:700}
+.stat .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f87171;margin-right:6px}
+.dot.live{background:var(--accent)}
+.stepn{display:inline-block;background:var(--gold);color:#0b0e14;font-weight:700;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:13px}
 </style>
 </head>
 <body>
 <h1>⚡ Luxury Wholesale Starter Kit</h1>
 <p class="small">Built by Scarlet for Ryian · $2M+ tier · National · Zero course required</p>
+
+
+<h2>0 &middot; Live Deal Co-Pilot — your step-by-step call chat</h2>
+<div class="card" id="copilot-gate">
+  <h3>Unlock the live chat</h3>
+  <p>Same PIN as the Command Deck. This section pulls live deal data and walks you through every call, step by step.</p>
+  <input id="kitkey" type="password" placeholder="Deck PIN" style="background:#101521;border:1px solid #2a3145;color:var(--ink);border-radius:6px;padding:9px;font-size:14px;font-family:inherit">
+  <button class="callbtn" onclick="kitUnlock()">Unlock</button>
+  <span id="kitgerr" style="display:none;color:var(--bad);font-size:13px">Wrong PIN — text Scarlet.</span>
+</div>
+<div id="kitlive" style="display:none">
+  <div id="kitstat"></div>
+  <div id="kitsteps"></div>
+  <div id="kitlogwrap">
+    <h3>Team logbook — every call, notes and progress</h3>
+    <div id="kitlog"></div>
+  </div>
+</div>
 
 <h2>1 · The Business Mechanics</h2>
 <div class="card">
@@ -164,5 +203,164 @@ a{color:var(--accent)}
 </div>
 
 <p class="small" style="margin-top:30px;border-top:1px solid #232a3a;padding-top:16px">Scarlet's standard disclaimer: I prep the math, the language, and the machine. The signing, the negotiating voice, and the winning — that's you, boss. Everything here is education and process, not legal, tax, or financial advice. 💋</p>
+
+<script>
+(function () {
+  var FUNC_URL = "https://superagent-e1f4347f.base44.app/functions/getLuxDashboardData";
+  var LOG_URL = "https://superagent-e1f4347f.base44.app/functions/logDeckCall";
+  var F = function (id) { return document.getElementById(id); };
+  var fm = function (n) { return n == null ? "\u2014" : "$" + Number(n).toLocaleString(); };
+  var D = null, started = false;
+  var AGENT = { name: "Claire Schenk", phone: "502-271-7771", email: "cschenk@kyselectproperties.com" };
+
+  function feeEngine(h) {
+    var m = (h.notes || "").match(/ARV est \$?([\d,]+)/i);
+    h.__arv = m ? Number(m[1].replace(/,/g, "")) : null;
+    if (!h.__arv || !h.asking) { h.__fee = null; h.__off = null; return; }
+    var devBuy = h.__arv * 0.72;
+    var band = h.asking >= 2000000 ? 0.045 : 0.07;
+    h.__fee = Math.max(100000, Math.round(h.asking * band));
+    var contract = devBuy - h.__fee;
+    h.__contract = Math.round(contract);
+    h.__off = h.asking > 0 ? Math.max(0, Math.round((1 - contract / h.asking) * 100)) : null;
+  }
+
+  function pick() {
+    if (!D || !D.houses) return null;
+    D.houses.forEach(feeEngine);
+    var live = D.houses.filter(function (h) {
+      return h.buyer && !/^(GAP|NO MATCH|n\/a|N\/A)/i.test(h.buyer) && !/dead|no longer|unavailable/i.test(String(h.status || ""));
+    });
+    live.sort(function (a, b) { return (a.__off == null ? 999 : a.__off) - (b.__off == null ? 999 : b.__off); });
+    return live[0] || null;
+  }
+
+  async function load() {
+    try {
+      var r = await fetch(FUNC_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: sessionStorage.getItem("luxpin") || "" }) });
+      if (r.status === 401) { sessionStorage.removeItem("luxpin"); gate(); return; }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      D = await r.json();
+      if (!D.ok) throw new Error(D.error || "backend error");
+      F("copilot-gate").style.display = "none";
+      F("kitlive").style.display = "block";
+      render();
+      if (!started) { started = true; setInterval(load, 60000); }
+    } catch (e) {
+      F("kitstat").innerHTML = '<p class="small" style="color:var(--bad)">Live feed unreachable (' + e.message + ') — the playbook below still works. Scarlet sees these too.</p>';
+    }
+  }
+
+  function render() {
+    var logs = (D && D.call_logs) || [];
+    var hot = pick();
+    var addr = hot ? hot.address : "";
+    var dealLogs = logs.filter(function (l) { return addr && l.address && l.address.indexOf(addr.split(",")[0]) !== -1; });
+    var pos = logs.filter(function (l) { return /positive/i.test(l.outcome || ""); }).length;
+    var members = {};
+    logs.forEach(function (l) { var k = l.member || "Team"; members[k] = (members[k] || 0) + 1; });
+    var board = Object.keys(members).sort(function (a, b) { return members[b] - members[a]; })
+      .map(function (k) { return k + " " + members[k]; }).join(" \u00b7 ") || "no calls yet";
+    var last = logs.length ? new Date(logs[logs.length - 1].when || Date.now()).toLocaleString() : "\u2014";
+
+    F("kitstat").innerHTML =
+      '<span class="dot live"></span><span class="small">live \u00b7 auto-refreshes every minute</span>' +
+      '<div class="statgrid">' +
+      '<div class="stat"><div class="v">' + logs.length + '</div><div class="l">calls logged</div></div>' +
+      '<div class="stat"><div class="v">' + pos + '</div><div class="l">reached \u2014 positive</div></div>' +
+      '<div class="stat"><div class="v">' + dealLogs.length + '</div><div class="l">calls on this deal</div></div>' +
+      '</div>' +
+      '<p class="small">Team board: ' + board + ' \u00b7 last activity ' + last + '</p>';
+
+    var idx = Math.min(Number(localStorage.getItem("kitwiz") || 0), 4);
+    var member = localStorage.getItem("kitmember") || "Ryian";
+    var bc = hot ? (hot.buyer_contact || {}) : {};
+    var dev = bc.contact ? bc.contact.split(",")[0].trim() : (bc.name || "your developer");
+    var verdict = hot && hot.__off != null ? (hot.__off <= 15 ? "WORKS" : hot.__off <= 25 ? "STRETCH" : "LONG SHOT") : "\u2014";
+
+    var brief0 = hot ? [
+      { l: "The house", t: hot.address + " \u2014 asking " + fm(hot.asking) + ", " + (hot.dom != null ? hot.dom + " days on market" : "") + (hot.last_cut ? ", already cut " + fm(hot.last_cut) : "") + "." },
+      { l: "The math (fee engine)", t: "ARV est " + fm(hot.__arv) + " \u00b7 our fee " + fm(hot.__fee) + " \u00b7 max contract " + fm(hot.__contract) + " (" + hot.__off + "% below asking). Verdict: " + verdict + (hot.__off > 15 ? " \u2014 hold for a price cut, or negotiate hard." : " \u2014 call today.") },
+      { l: "Listing agent", t: AGENT.name + " \u00b7 " + AGENT.phone + " \u00b7 " + AGENT.email + ". Scarlet keeps this current \u2014 if it\u2019s a new play, check the deck." },
+      { l: "Matched developer", t: (bc.contact || dev) + (bc.phone ? " \u00b7 " + bc.phone : "") + (bc.email ? " \u00b7 " + bc.email : "") + ". He builds in this pocket \u2014 he\u2019s the first look, not the only look." },
+    ] : [{ l: "Nothing live yet", t: "No verified, buyer-matched deal on the board right now. Text Scarlet and she\u2019ll hunt one down today." }];
+
+    var steps = [
+      { t: "Step 1 of 5 \u2014 Know the deal cold", brief: brief0 },
+      { t: "Step 2 of 5 \u2014 Call the seller\u2019s agent", brief: [
+        { l: "Your introduction", t: "\u201cHi " + AGENT.name.split(" ")[0] + ", this is " + member + " Willis with Willis Acquisitions \u2014 we\u2019re a buyer-side firm. I have a client actively looking in this area and I\u2019m calling about the listing.\u201d" },
+        { l: "Ask exactly these four", t: "1. Is the seller negotiable below asking? 2. Are there other offers right now? 3. What\u2019s the seller\u2019s timeline? 4. Would they accept an option-style or low-earnest contract with a clean, fast close?" },
+        { l: "Rules of the call", t: "Never name your number first. One question at a time. If she asks who the client is: \u201ca local luxury builder \u2014 I\u2019ll bring specifics once I know the seller\u2019s flexibility.\u201d" },
+      ], call: AGENT.phone, who: AGENT.name },
+      { t: "Step 3 of 5 \u2014 Log the call", brief: [
+        { l: "Why log it", t: "Every call goes in the shared logbook \u2014 you see the notes and progress, the team sees it too, and Scarlet builds the next script from what you learned. No call goes unrecorded." },
+      ] },
+      { t: "Step 4 of 5 \u2014 Call your developer", brief: [
+        { l: "Your introduction \u2014 invite, never offer", t: "\u201c" + dev.split(" ")[0] + ", it\u2019s " + member + " with Willis Acquisitions. I\u2019ve got something live in your zip right now. Seller\u2019s already cut once and there\u2019s room to deal. Before I bring it to anyone else \u2014 is that the kind of thing you\u2019d want a first look at? And if the all-in number worked for you, could you move this month?\u201d" },
+        { l: "If he asks what you make", t: "\u201cI\u2019m contracted at a number and you\u2019d pay my number \u2014 assigned, not added. It\u2019s in the price, not on top of it.\u201d" },
+        { l: "If he wants the address", t: "\u201cHappy to \u2014 the non-circumvention goes out same day and the full package follows.\u201d" },
+      ], call: bc.phone || null, who: dev },
+      { t: "Step 5 of 5 \u2014 Sign & assign", brief: [
+        { l: "After the call", t: "Text Scarlet how it went. She preps the option contract and assignment paperwork \u2014 you sign, the fee is built into the number, no cash ever leaves your pocket. Log it below, then the machine finds the next house." },
+      ] },
+    ];
+    var s = steps[idx];
+    var done = idx >= steps.length - 1;
+    var html = '<h3><span class="stepn">' + (idx + 1) + '</span> ' + s.t + '</h3>';
+    html += s.brief.map(function (b) { return '<div class="bubble"><span class="bl">' + b.l + '</span>' + b.t + '</div>'; }).join("");
+    if (s.call) html += '<a class="callbtn" href="tel:' + String(s.call).replace(/[^\d]/g, "") + '">\ud83d\udcde Call ' + (s.who || "") + '</a>';
+    html += '<button class="callbtn" onclick="kitNext()">' + (done ? 'Start the next deal \u2192' : 'Done \u2014 next step \u2192') + '</button>';
+    if (idx === 2 || done) {
+      html += '<div class="logform"><div class="lf-title">Log this call</div>' +
+        '<input id="kitmember" placeholder="Your name" value="' + member + '">' +
+        '<select id="kitoutcome"><option>Reached \u2014 positive</option><option>Reached \u2014 cold</option><option>Left voicemail</option><option>No answer</option><option>Call back later</option></select>' +
+        '<textarea id="kitnotes" placeholder="Notes: what they said, next steps"></textarea>' +
+        '<button class="callbtn" onclick="kitLog()">Save to logbook</button><span id="kitsaved" class="ok"></span></div>';
+    }
+    F("kitsteps").innerHTML = html;
+
+    F("kitlog").innerHTML = logs.length ? logs.map(function (l) {
+      var d = l.when ? new Date(l.when).toLocaleString() : "";
+      return '<div class="logrow"><div class="lr-h"><b>' + (l.member || "Team") + '</b> \u00b7 ' + (l.outcome || "") + ' \u00b7 ' + d + (l.step ? ' \u00b7 ' + l.step : '') + (l.address ? ' \u00b7 ' + l.address : '') + '</div><div class="notes">' + (l.notes || "") + '</div></div>';
+    }).join("") : '<div class="logrow"><div class="lr-h">No calls logged yet \u2014 yours will be the first.</div></div>';
+
+    window.__kitctx = { step: s.t, address: addr };
+  }
+
+  window.kitNext = function () {
+    var i = Number(localStorage.getItem("kitwiz") || 0) + 1;
+    if (i > 4) i = 0;
+    localStorage.setItem("kitwiz", i);
+    render();
+  };
+
+  window.kitLog = async function () {
+    var member = (F("kitmember") || {}).value || "";
+    localStorage.setItem("kitmember", member.trim());
+    try {
+      var r = await fetch(LOG_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: sessionStorage.getItem("luxpin") || "", member: member, step: window.__kitctx.step, address: window.__kitctx.address, outcome: (F("kitoutcome") || {}).value || "", notes: (F("kitnotes") || {}).value || "" }) });
+      var j = await r.json();
+      if (j.ok) { F("kitsaved").textContent = "\u2713 Saved to the logbook"; load(); }
+      else F("kitsaved").textContent = "Save failed \u2014 try again";
+    } catch (_e) { F("kitsaved").textContent = "Save failed \u2014 try again"; }
+  };
+
+  function gate() {
+    F("copilot-gate").style.display = "block";
+    F("kitlive").style.display = "none";
+  }
+
+  window.kitUnlock = async function () {
+    var k = (F("kitkey").value || "").trim();
+    if (!k) return;
+    sessionStorage.setItem("luxpin", k);
+    var ok = await load();
+    if (!ok && sessionStorage.getItem("luxpin") !== k) return;
+  };
+
+  if (F("kitkey")) F("kitkey").addEventListener("keydown", function (e) { if (e.key === "Enter") kitUnlock(); });
+  if (sessionStorage.getItem("luxpin")) load();
+})();
+</script>
 </body>
 </html>

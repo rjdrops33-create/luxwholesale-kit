@@ -214,8 +214,8 @@ a{color:var(--accent)}
   var AGENT = { name: "Claire Schenk", phone: "502-271-7771", email: "cschenk@kyselectproperties.com" };
 
   function feeEngine(h) {
-    var m = (h.notes || "").match(/ARV est \$?([\d,]+)/i);
-    h.__arv = m ? Number(m[1].replace(/,/g, "")) : null;
+    var m = (h.notes || "").match(/ARV est(?:imate)?[^\d$]*\$?\s*([\d][\d,\.]*)\s*([MmKk])?/);
+    h.__arv = m ? Math.round(Number(m[1].replace(/,/g, "")) * ((m[2] || "").toLowerCase() === "m" ? 1000000 : (m[2] || "").toLowerCase() === "k" ? 1000 : 1)) : null;
     if (!h.__arv || !h.asking) { h.__fee = null; h.__off = null; return; }
     var devBuy = h.__arv * 0.72;
     var band = h.asking >= 2000000 ? 0.045 : 0.07;
@@ -280,7 +280,7 @@ a{color:var(--accent)}
 
     var brief0 = hot ? [
       { l: "The house", t: hot.address + " \u2014 asking " + fm(hot.asking) + ", " + (hot.dom != null ? hot.dom + " days on market" : "") + (hot.last_cut ? ", already cut " + fm(hot.last_cut) : "") + "." },
-      { l: "The math (fee engine)", t: "ARV est " + fm(hot.__arv) + " \u00b7 our fee " + fm(hot.__fee) + " \u00b7 max contract " + fm(hot.__contract) + " (" + hot.__off + "% below asking). Verdict: " + verdict + (hot.__off > 15 ? " \u2014 hold for a price cut, or negotiate hard." : " \u2014 call today.") },
+      { l: "The math (fee engine)", t: hot.__arv ? "ARV est " + fm(hot.__arv) + " \u00b7 our fee " + fm(hot.__fee) + " \u00b7 max contract " + fm(hot.__contract) + " (" + hot.__off + "% below asking). Verdict: " + verdict + (hot.__off > 15 ? " \u2014 hold for a price cut, or negotiate hard." : " \u2014 call today.") : "Comps not verified yet \u2014 Scarlet is pulling them. Working target from the fee screen: contract at $1.30M or under." },
       { l: "Listing agent", t: AGENT.name + " \u00b7 " + AGENT.phone + " \u00b7 " + AGENT.email + ". Scarlet keeps this current \u2014 if it\u2019s a new play, check the deck." },
       { l: "Matched developer", t: (bc.contact || dev) + (bc.phone ? " \u00b7 " + bc.phone : "") + (bc.email ? " \u00b7 " + bc.email : "") + ". He builds in this pocket \u2014 he\u2019s the first look, not the only look." },
     ] : [{ l: "Nothing live yet", t: "No verified, buyer-matched deal on the board right now. Text Scarlet and she\u2019ll hunt one down today." }];

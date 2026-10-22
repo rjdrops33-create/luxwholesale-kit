@@ -28,6 +28,11 @@ a{color:var(--accent)}
 .bubble{background:#101521;border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:10px 14px;margin:8px 0;font-size:13.5px;line-height:1.6;color:#dfe5ef}
 .bubble .bl{display:block;color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;opacity:.85}
 .callbtn{display:inline-block;background:#1d2433;color:var(--accent);border:1px solid #2c3648;border-radius:8px;padding:8px 14px;margin:8px 8px 8px 0;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit}
+.ccard{display:inline-block;margin-top:12px;background:#101318;border:1px solid #d4af37;border-radius:10px;padding:14px 18px;min-width:220px;}
+.cc-who{color:#d4af37;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;}
+.cc-num{color:#f2f0ea;font-size:20px;font-family:Georgia,serif;margin:4px 0 8px;}
+.cc-sub{color:#8a887f;font-size:11px;margin-top:6px;}
+.ccard .callbtn{display:inline-block;font-size:12px;padding:6px 12px;}
 .logform{margin-top:12px;background:#101521;border:1px solid #232a3a;border-radius:10px;padding:12px}
 .logform input,.logform select,.logform textarea{width:100%;margin-top:8px;padding:9px;background:#0b0e14;border:1px solid #2a3145;color:var(--ink);border-radius:6px;font-size:13px;font-family:inherit}
 .logform textarea{min-height:60px;resize:vertical}
@@ -211,6 +216,9 @@ a{color:var(--accent)}
   var F = function (id) { return document.getElementById(id); };
   var fm = function (n) { return n == null ? "\u2014" : "$" + Number(n).toLocaleString(); };
   var D = null, started = false;
+  var IS_DESKTOP = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function fmtPhone(d) { var p = String(d || "").replace(/[^\d]/g, ""); return p.length === 10 ? "(" + p.slice(0,3) + ") " + p.slice(3,6) + "-" + p.slice(6) : String(d || ""); }
+  window.kitCopyNum = function (n) { try { navigator.clipboard.writeText(n); } catch (_e) {} var el = document.getElementById("kitcopymsg"); if (el) { el.textContent = "Number copied"; setTimeout(function () { el.textContent = ""; }, 1600); } };
   var AGENT = { name: "Claire Schenk", phone: "502-271-7771", email: "cschenk@kyselectproperties.com" };
 
   function feeEngine(h) {
@@ -308,7 +316,9 @@ a{color:var(--accent)}
     var done = idx >= steps.length - 1;
     var html = '<h3><span class="stepn">' + (idx + 1) + '</span> ' + s.t + '</h3>';
     html += s.brief.map(function (b) { return '<div class="bubble"><span class="bl">' + b.l + '</span>' + b.t + '</div>'; }).join("");
-    if (s.call) html += '<a class="callbtn" href="tel:' + String(s.call).replace(/[^\d]/g, "") + '">\ud83d\udcde Call ' + (s.who || "") + '</a>';
+    if (s.call) html += IS_DESKTOP
+      ? '<div class="ccard"><div class="cc-who">' + (s.who || "Contact") + '</div><div class="cc-num">' + fmtPhone(s.call) + '</div><button class="callbtn" onclick="kitCopyNum(String(\'' + String(s.call).replace(/[^\d]/g, "") + '\'))">Copy number</button><span id="kitcopymsg" class="okmsg"></span><div class="cc-sub">Dial from your phone \u2014 your script is above.</div></div>'
+      : '<a class="callbtn" href="tel:' + String(s.call).replace(/[^\d]/g, "") + '">\ud83d\udcde Call ' + (s.who || "") + '</a>';
     html += '<button class="callbtn" onclick="kitNext()">' + (done ? 'Start the next deal \u2192' : 'Done \u2014 next step \u2192') + '</button>';
     if (idx === 2 || done) {
       html += '<div class="logform"><div class="lf-title">Log this call</div>' +

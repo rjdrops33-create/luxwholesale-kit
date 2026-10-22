@@ -232,7 +232,7 @@ a{color:var(--accent)}
       return h.buyer && !/^(GAP|NO MATCH|n\/a|N\/A)/i.test(h.buyer) && !/dead|no longer|unavailable/i.test(String(h.status || ""));
     });
     live.sort(function (a, b) { return (a.__off == null ? 999 : a.__off) - (b.__off == null ? 999 : b.__off); });
-    return live[0] || null;
+    return live.filter(function (h) { return /10720/.test(h.address || ""); })[0] || live[0] || null; // pinned to active play (10720 US Hwy 42) — update with the play
   }
 
   async function load() {
